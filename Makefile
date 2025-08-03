@@ -34,7 +34,7 @@ export JAVA8_HOME
 #
 # Compilation artifacts
 #
-CLASSPATH     := $(BDJSDK_HOME)/target/lib/enhanced-stubs.zip:$(BDJSDK_HOME)/target/lib/bdjstack.jar:$(BDJSDK_HOME)/target/lib/rt.jar
+CLASSPATH     := $(BDJSDK_HOME)/target/lib/enhanced-stubs.zip:$(BDJSDK_HOME)/target/lib/bdjstack.jar:$(BDJSDK_HOME)/target/lib/rt.jar:lib/luaj-jse-3.0.1.jar
 SOURCES       := $(wildcard src/org/bdj/*.java) $(wildcard src/org/bdj/sandbox/*.java) $(wildcard src/org/bdj/api/*.java)
 JFLAGS        := -Xlint:-options -source 1.4 -target 1.4
 
