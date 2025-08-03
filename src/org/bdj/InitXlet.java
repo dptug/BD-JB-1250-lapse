@@ -19,8 +19,8 @@ public class InitXlet implements Xlet {
                 Status.println("Exploit success - sandbox escape achieved");
 				NativeInvoke.sendNotificationRequest("Hello World");
 				
-                // Run Lua script after successful exploit
-                LuaRunner.runScript("Status.println('Hello from Lua via lapse!')");
+                // Run USB-based Lua script for payload injection after successful exploit
+                LuaRunner.runScriptFile("/mnt/usb0/inject_hen.lua");
             } else {
                 Status.println("Exploit failed - sandbox still active");
             }

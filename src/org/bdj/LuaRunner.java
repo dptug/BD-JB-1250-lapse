@@ -8,14 +8,14 @@ import org.luaj.vm2.lib.jse.CoerceJavaToLua;
 /**
  * LuaRunner class for executing Lua scripts via LuaJ after BD-JB exploit.
  * This class provides integration between Java and Lua environments,
- * exposing the Status class to Lua scripts for logging and output.
+ * exposing the Status class for logging and PayloadBridge class for payload injection.
  */
 public class LuaRunner {
     
     private static Globals globals;
     
     /**
-     * Initialize the Lua environment and expose the Status class.
+     * Initialize the Lua environment and expose the Status and PayloadBridge classes.
      * This should be called after successful exploit when security restrictions are lifted.
      */
     private static void initLuaEnvironment() {
@@ -26,6 +26,9 @@ public class LuaRunner {
             // Expose the Status class to Lua
             LuaValue statusClass = CoerceJavaToLua.coerce(Status.class);
             globals.set("Status", statusClass);
+            
+            // Expose the PayloadBridge class to Lua for payload injection
+            globals.set("PayloadBridge", new PayloadBridge());
         }
     }
     
