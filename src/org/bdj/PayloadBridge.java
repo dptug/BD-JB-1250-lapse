@@ -2,93 +2,96 @@ package org.bdj;
 
 import org.luaj.vm2.LuaValue;
 import org.luaj.vm2.lib.OneArgFunction;
+import java.io.FileOutputStream;
+import java.io.File;
 
 /**
- * PayloadBridge class provides a bridge between Lua scripts and kernel payload injection.
- * This class exposes the injectPayload method to Lua scripts for HEN/GoldHEN payload injection
- * after the BD-JB exploit and sandbox escape is achieved.
- * 
- * Currently implements a stub that logs payload information and returns success,
- * designed for future extension with actual kernel ROP or native code payload injection logic.
+ * PayloadBridge class provides the definitive bridge between the BD-J sandbox escape
+ * and the Lua-based kernel exploit chain. It saves the user's payload (HEN/GoldHEN)
+ * to a standard location and then executes the main kernel exploit script.
  */
 public class PayloadBridge extends OneArgFunction {
-    
+
     /**
-     * Static method to inject a kernel payload.
-     * This is the main entry point for payload injection from Lua scripts.
-     * 
-     * Currently serves as a stub that logs the payload length and returns success.
-     * Future developers can extend this method to implement actual kernel ROP
-     * or native code payload injection logic.
-     * 
-     * @param payload The payload bytes to inject into the kernel
-     * @return true if injection was successful, false otherwise
+     * Main entry point for payload injection. This method performs two critical functions:
+     * 1. It takes the payload (e.g., hen.bin) read from the USB drive and writes it to the internal HDD at `/data/payload.bin`. This makes it available for the post-jailbreak loader.
+     * 2. It triggers the main Lua script (`main.lua`), which in turn executes the `lapse.lua` kernel exploit to jailbreak the system.
+     *
+     * @param payload The payload bytes (e.g., HEN/GoldHEN) to be written to the internal HDD.
+     * @return true if the process completes without throwing an exception, false otherwise.
      */
     public static boolean injectPayload(byte[] payload) {
         try {
-            if (payload == null) {
-                Status.println("PayloadBridge: Error - payload is null");
+            if (System.getSecurityManager() != null) {
+                Status.println("PayloadBridge ERROR: Sandbox is still active. Cannot proceed.");
                 return false;
             }
-            
-            if (payload.length == 0) {
-                Status.println("PayloadBridge: Error - payload is empty");
-                return false;
+
+            Status.println("PayloadBridge: Security Manager disabled. Preparing for kernel exploitation.");
+
+            // Step 1: Write the provided payload to the internal HDD.
+            // The bin_loader.lua script expects to find the payload here after the jailbreak.
+            if (payload != null && payload.length > 0) {
+                Status.println("PayloadBridge: Writing " + payload.length + " bytes to /data/payload.bin...");
+                try {
+                    // Ensure the /data/ directory exists.
+                    File dataDir = new File("/data/");
+                    if (!dataDir.exists()) {
+                        dataDir.mkdirs();
+                    }
+                    FileOutputStream fos = new FileOutputStream("/data/payload.bin");
+                    fos.write(payload);
+                    fos.close();
+                    Status.println("PayloadBridge: Successfully wrote payload to internal storage.");
+                } catch (Exception e) {
+                    Status.printStackTrace("PayloadBridge WARNING: Could not write payload to /data/payload.bin. The bin_loader may fail.", e);
+                    // We continue anyway, as the kernel exploit itself might be the primary goal.
+                }
+            } else {
+                Status.println("PayloadBridge: No payload provided to write. Assuming it already exists at /data/payload.bin.");
             }
-            
-            Status.println("PayloadBridge: Received payload of " + payload.length + " bytes");
-            Status.println("PayloadBridge: Starting payload injection...");
-            
-            // TODO: Future developers should implement actual kernel payload injection here
-            // This could involve:
-            // - Setting up ROP chains for kernel code execution
-            // - Calling native code injection routines
-            // - Interfacing with PS4 kernel exploit primitives
-            // - Handling different payload types (HEN, GoldHEN, etc.)
-            
-            // For now, simulate successful injection
-            Status.println("PayloadBridge: Payload injection completed successfully (stub implementation)");
-            
+
+            // Step 2: Execute the Lua-based kernel exploit.
+            // This is the fulfillment of the original "TODO". The entire kernel exploit
+            // is contained within the Lua scripts.
+            Status.println("PayloadBridge: Handing off to Lua kernel exploit chain...");
+            LuaRunner.runScriptFile("/mnt/usb0/savedata/main.lua"); // Assumes savedata is on USB
+
+            Status.println("PayloadBridge: Lua kernel exploit execution finished. System should now be jailbroken.");
+
             return true;
-            
+
         } catch (Exception e) {
-            Status.printStackTrace("PayloadBridge: Error during payload injection: ", e);
+            Status.printStackTrace("PayloadBridge FATAL: A critical error occurred during the exploit process.", e);
             return false;
         }
     }
-    
+
     /**
-     * LuaJ OneArgFunction implementation to make this callable from Lua.
-     * This allows Lua scripts to call PayloadBridge(payloadBytes) directly.
-     * 
-     * @param arg The Lua argument containing the payload bytes
-     * @return LuaValue.TRUE if successful, LuaValue.FALSE otherwise
+     * LuaJ OneArgFunction implementation to allow this class to be called directly from Lua scripts.
+     * It extracts the payload data from the Lua environment and passes it to the main injectPayload method.
+     *
+     * @param arg The Lua argument, expected to be a string or userdata containing the payload bytes.
+     * @return LuaValue.TRUE on success, LuaValue.FALSE on failure.
      */
     @Override
     public LuaValue call(LuaValue arg) {
         try {
-            // Convert Lua userdata to byte array
-            if (arg.isuserdata()) {
-                Object userData = arg.touserdata();
-                if (userData instanceof byte[]) {
-                    byte[] payload = (byte[]) userData;
-                    boolean success = injectPayload(payload);
-                    return success ? LuaValue.TRUE : LuaValue.FALSE;
-                } else {
-                    Status.println("PayloadBridge: Error - argument is not a byte array");
-                    return LuaValue.FALSE;
-                }
-            } else if (arg.isstring()) {
-                // Handle string argument as byte array
-                byte[] payload = arg.tojstring().getBytes();
-                boolean success = injectPayload(payload);
-                return success ? LuaValue.TRUE : LuaValue.FALSE;
+            byte[] payload = null;
+            if (arg.isstring()) {
+                payload = arg.tojstring().getBytes("UTF-8");
+            } else if (arg.isuserdata(byte[].class)) {
+                payload = (byte[]) arg.touserdata(byte[].class);
             } else {
-                Status.println("PayloadBridge: Error - invalid argument type");
+                Status.println("PayloadBridge Lua ERROR: Argument must be a string or byte array.");
                 return LuaValue.FALSE;
             }
+
+            boolean success = injectPayload(payload);
+            return success ? LuaValue.TRUE : LuaValue.FALSE;
+
         } catch (Exception e) {
-            Status.printStackTrace("PayloadBridge: Error in Lua call: ", e);
+            Status.printStackTrace("PayloadBridge: Error in Lua call.", e);
             return LuaValue.FALSE;
         }
     }
