@@ -15,7 +15,7 @@
 # <http://www.gnu.org/licenses/>.
 
 
-DISC_LABEL := helloworld
+DISC_LABEL := ps5-lua-server
 
 #
 # Host tools
@@ -24,20 +24,21 @@ MAKEFILE_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
 BDJSDK_HOME  ?= $(MAKEFILE_DIR)/../../
 BDSIGNER     := $(BDJSDK_HOME)/host/bin/bdsigner
 MAKEFS       := $(BDJSDK_HOME)/host/bin/makefs
-JAVA8_HOME    ?= $(shell readlink -f /usr/bin/java | sed 's|/bin/java||')
-JAVAC        := javac
-JAR          := jar
+JAVA8_HOME   ?= $(BDJSDK_HOME)/host/jdk8
+JAVA11_HOME  ?= $(BDJSDK_HOME)/host/jdk11
+JAVAC        := $(JAVA11_HOME)/bin/javac
+JAR          := $(JAVA11_HOME)/bin/jar
 
 export JAVA8_HOME
-
+export JAVA11_HOME
 
 #
 # Compilation artifacts
 #
-CLASSPATH     := $(BDJSDK_HOME)/target/lib/enhanced-stubs.zip:$(BDJSDK_HOME)/target/lib/bdjstack.jar:$(BDJSDK_HOME)/target/lib/rt.jar:lib/luaj-jse-3.0.1.jar
-SOURCES       := $(wildcard src/org/bdj/*.java) $(wildcard src/org/bdj/sandbox/*.java) $(wildcard src/org/bdj/api/*.java)
-JFLAGS        := -Xlint:-options -source 7 -target 7
-
+CLASSPATH := $(BDJSDK_HOME)/target/lib/enhanced-stubs.zip:$(BDJSDK_HOME)/target/lib/sony-stubs.jar
+SOURCES   := $(wildcard src/org/homebrew/*.java)
+JFLAGS    := -Xlint:-options
+LUAJ_URL  := https://github.com/luaj/luaj/releases/download/v3.0.2/luaj-jse-3.0.2.jar
 
 #
 # Disc files
@@ -57,12 +58,14 @@ all: $(DISC_LABEL).iso
 discdir:
 	mkdir -p $(DISC_DIRS)
 
+luaj.jar: 
+	wget -q -O $@ $(LUAJ_URL)
 
-discdir/BDMV/JAR/00000.jar: discdir $(SOURCES)
-	$(JAVAC) $(JFLAGS) -cp $(CLASSPATH) $(SOURCES)
+discdir/BDMV/JAR/00000.jar: discdir $(SOURCES) luaj.jar
+	$(JAVAC) $(JFLAGS) -cp $(CLASSPATH):luaj.jar $(SOURCES)
+	unzip -o -d src luaj.jar -x META-INF META-INF/MANIFEST.MF
 	$(JAR) cf $@ -C src/ .
 	$(BDSIGNER) -keystore $(BDJSDK_HOME)/resources/sig.ks $@
-
 
 discdir/%: discdir
 	cp $(BDJSDK_HOME)/resources/AVCHD/$* $@
@@ -73,8 +76,6 @@ $(DISC_LABEL).iso: $(DISC_FILES)
 
 
 clean:
-	rm -rf META-INF $(DISC_LABEL).iso discdir src/org/bdj/*.class src/org/bdj/sandbox/*.class src/org/bdj/api/*.class
+	rm -rf META-INF $(DISC_LABEL).iso discdir src/org/homebrew/*.class \
+        src/*.class src/META-INF src/org/luaj luaj.jar
 
-
-test: $(DISC_LABEL).iso
-	vlc $<
