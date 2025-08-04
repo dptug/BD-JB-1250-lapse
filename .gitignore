@@ -1,9 +1,17 @@
 # Build artifacts
 *.class
 *.jar
+!lib/*.jar
 *.iso
 discdir/
 META-INF/
+
+# Temporary files
+*.tmp
+*.log
+
+# SDK extraction artifacts
+bdj-sdk/bdj-sdk-master/
 
 # Temporary files
 /tmp/
