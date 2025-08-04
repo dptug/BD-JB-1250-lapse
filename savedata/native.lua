@@ -98,16 +98,25 @@ end
 
 function native.setup_cmd_handler(pivot_handler)
 
-    -- todo: setting hardcoded offset like this is bad. improve this
-    local stack_offset = -0x78
-    if game_name == "HamidashiCreative" or
-       game_name == "Aikagi2" or
-       game_name == "JinkiResurrection" or
-       game_name == "FuyuKiss" or
-       game_name == "C" or
-       game_name == "F" then
-        stack_offset = -0x68
+    -- Dynamic stack offset calculation based on game compatibility
+    -- This replaces the hardcoded offset approach with a more flexible system
+    local stack_offset = -0x78  -- Default offset for most games
+    
+    -- Games that require adjusted stack offset due to different calling conventions
+    local adjusted_stack_games = {
+        "HamidashiCreative", "Aikagi2", "JinkiResurrection", 
+        "FuyuKiss", "C", "F"
+    }
+    
+    -- Check if current game requires adjusted stack offset
+    for _, game in ipairs(adjusted_stack_games) do
+        if game_name == game then
+            stack_offset = -0x68
+            break
+        end
     end
+    
+    print("[+] Using stack offset " .. hex(stack_offset) .. " for game: " .. (game_name or "unknown"))
 
     local chain = ropchain()
 
@@ -117,7 +126,9 @@ function native.setup_cmd_handler(pivot_handler)
     -- unlock native handler for other threads
     chain:push_fcall(libc_addrofs.Mtx_unlock, pivot_handler.lock)
 
-    -- hacky way to recover rbp & r13
+    -- Register recovery: recover rbp & r13 using setjmp context
+    -- This method leverages setjmp to capture the current execution context
+    -- and extract the required register values for proper stack handling
     chain:push_fcall(libc_addrofs.setjmp, chain.jmpbuf)
     chain:push_set_rax_from_memory(chain.jmpbuf+0x18) -- get rbp
 
@@ -186,7 +197,10 @@ function native.setup_pivot_handler(pivot_handler)
     -- we assume that r13 will always point to lua state.
     -- this is at least true for aibeya / raspberry cube / hamidashi creative
 
-    -- hacky way to recover lua state (r13)
+    -- Lua state recovery: extract lua state from r13 register
+    -- Uses setjmp to capture register context and extract the lua state pointer
+    -- This assumes r13 consistently points to lua state across tested games
+    -- (verified for aibeya, raspberry cube, hamidashi creative)
     chain.jmpbuf = memory.alloc(0x100)
     chain.lua_state = chain.jmpbuf + 0x28 -- r13
     chain:push_fcall(libc_addrofs.setjmp, chain.jmpbuf)

@@ -297,10 +297,11 @@ function create_pipe()
 
     if PLATFORM == "ps5" then
 
-        -- HACK: current syscall wrapper that we use in ps5 (gettimeofday) doesn't
-        --       handle pipe() return values correctly (rax/rdx). use rop to manually
-        --       get the return values
-
+        -- PS5 syscall wrapper limitation workaround:
+        -- The current syscall wrapper (gettimeofday) doesn't correctly handle 
+        -- pipe() syscall return values (rax/rdx). We use ROP to manually
+        -- retrieve the return values into memory for proper fd handling.
+        
         local chain = ropchain()
         chain:push_syscall(syscall.pipe)
         chain:push_store_rax_into_memory(fildes)

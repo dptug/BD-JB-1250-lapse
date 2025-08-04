@@ -55,7 +55,7 @@ public class PayloadBridge extends OneArgFunction {
             // This is the fulfillment of the original "TODO". The entire kernel exploit
             // is contained within the Lua scripts.
             Status.println("PayloadBridge: Handing off to Lua kernel exploit chain...");
-            LuaRunner.runScriptFile("/mnt/usb0/savedata/main.lua"); // Assumes savedata is on USB
+            LuaRunner.runScriptFile("/av_contents/content_tmp/savedata/main.lua"); // Use local savedata path
 
             Status.println("PayloadBridge: Lua kernel exploit execution finished. System should now be jailbroken.");
 
