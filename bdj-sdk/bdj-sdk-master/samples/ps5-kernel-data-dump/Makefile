@@ -15,29 +15,29 @@
 # <http://www.gnu.org/licenses/>.
 
 
-DISC_LABEL := helloworld
+DISC_LABEL := ps5-kernel-data-dump
 
 #
 # Host tools
 #
 MAKEFILE_DIR := $(dir $(realpath $(lastword $(MAKEFILE_LIST))))
-BDJSDK_HOME  ?= $(MAKEFILE_DIR)/bdj-sdk/bdj-sdk-master
+BDJSDK_HOME  ?= $(MAKEFILE_DIR)/../../
 BDSIGNER     := $(BDJSDK_HOME)/host/bin/bdsigner
 MAKEFS       := $(BDJSDK_HOME)/host/bin/makefs
-JAVA8_HOME    ?= /usr
-JAVAC        := javac
-JAR          := jar
+JAVA8_HOME   ?= $(BDJSDK_HOME)/host/jdk8
+JAVA11_HOME  ?= $(BDJSDK_HOME)/host/jdk11
+JAVAC        := $(JAVA11_HOME)/bin/javac
+JAR          := $(JAVA11_HOME)/bin/jar
 
 export JAVA8_HOME
-
+export JAVA11_HOME
 
 #
 # Compilation artifacts
 #
-CLASSPATH     := $(BDJSDK_HOME)/target/lib/enhanced-stubs.zip:$(BDJSDK_HOME)/target/lib/bdjstack.jar:$(BDJSDK_HOME)/target/lib/rt.jar:lib/luaj-jse-3.0.1.jar
-SOURCES       := $(wildcard src/org/bdj/*.java) $(wildcard src/org/bdj/sandbox/*.java) $(wildcard src/org/bdj/api/*.java)
-JFLAGS        := -Xlint:-options -source 8 -target 8
-
+CLASSPATH := $(BDJSDK_HOME)/target/lib/enhanced-stubs.zip:$(BDJSDK_HOME)/target/lib/sony-stubs.jar
+SOURCES   := $(wildcard src/org/homebrew/*.java)
+JFLAGS    := -Xlint:-options
 
 #
 # Disc files
@@ -57,12 +57,10 @@ all: $(DISC_LABEL).iso
 discdir:
 	mkdir -p $(DISC_DIRS)
 
-
 discdir/BDMV/JAR/00000.jar: discdir $(SOURCES)
 	$(JAVAC) $(JFLAGS) -cp $(CLASSPATH) $(SOURCES)
 	$(JAR) cf $@ -C src/ .
 	$(BDSIGNER) -keystore $(BDJSDK_HOME)/resources/sig.ks $@
-
 
 discdir/%: discdir
 	cp $(BDJSDK_HOME)/resources/AVCHD/$* $@
@@ -73,8 +71,5 @@ $(DISC_LABEL).iso: $(DISC_FILES)
 
 
 clean:
-	rm -rf META-INF $(DISC_LABEL).iso discdir src/org/bdj/*.class src/org/bdj/sandbox/*.class src/org/bdj/api/*.class
+	rm -rf META-INF $(DISC_LABEL).iso discdir src/org/homebrew/*.class
 
-
-test: $(DISC_LABEL).iso
-	vlc $<
