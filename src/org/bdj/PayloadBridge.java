@@ -51,11 +51,10 @@ public class PayloadBridge extends OneArgFunction {
                 Status.println("PayloadBridge: No payload provided to write. Assuming it already exists at /data/payload.bin.");
             }
 
-            // Step 2: Execute the Lua-based kernel exploit.
-            // This is the fulfillment of the original "TODO". The entire kernel exploit
-            // is contained within the Lua scripts.
-            Status.println("PayloadBridge: Handing off to Lua kernel exploit chain...");
-            LuaRunner.runScriptFile("/mnt/usb0/savedata/main.lua"); // Assumes savedata is on USB
+            // Step 2: Execute the BD-J specific kernel exploit.
+            // This is adapted for BD-J entrypoint instead of game-based exploitation
+            Status.println("PayloadBridge: Handing off to BD-J Lua kernel exploit chain...");
+            LuaRunner.runScriptFile("/mnt/usb0/savedata/bdj_main.lua"); // BD-J specific version
 
             Status.println("PayloadBridge: Lua kernel exploit execution finished. System should now be jailbroken.");
 

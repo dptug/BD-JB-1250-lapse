@@ -178,7 +178,7 @@ function lua.resolve_game(luaB_auxwrap)
         eboot_addrofs = gadget_table.aikagi_kimi_isshoni_pack.eboot_addrofs
         libc_addrofs = gadget_table.aikagi_kimi_isshoni_pack.libc_addrofs
         gadgets = gadget_table.aikagi_kimi_isshoni_pack.gadgets
-    elseif game_name == "C" then -- TODO: Test
+    elseif game_name == "C" then
         print("[+] Game identified as C/D")
         eboot_addrofs = gadget_table.c.eboot_addrofs
         libc_addrofs = gadget_table.c.libc_addrofs
