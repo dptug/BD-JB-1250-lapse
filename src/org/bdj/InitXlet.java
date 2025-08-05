@@ -20,7 +20,7 @@ public class InitXlet implements Xlet {
 				NativeInvoke.sendNotificationRequest("Hello World");
 				
                 // Run USB-based Lua script for payload injection after successful exploit
-                LuaRunner.runScriptFile("/mnt/usb0/inject_hen.lua");
+                LuaRunner.runScriptFile("/mnt/disc0/inject_hen.lua");
             } else {
                 Status.println("Exploit failed - sandbox still active");
             }
@@ -43,6 +43,7 @@ public class InitXlet implements Xlet {
 
 	}
 }
+
 
 
 
