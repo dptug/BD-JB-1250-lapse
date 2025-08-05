@@ -11,7 +11,7 @@ Status.println("=== USB Payload Loader Starting ===")
 Status.println("Looking for payload.bin on USB stick...")
 
 -- Define the payload file path
-local payload_path = "/mnt/usb0/payload.bin"
+local payload_path = "/mnt/disc0/payload.bin"
 
 -- Function to read a file in binary mode and return content as string
 local function read_binary_file(path)
